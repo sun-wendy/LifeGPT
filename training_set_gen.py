@@ -36,7 +36,7 @@ def generate_sets(A=100, N=30, I=2, Toroidal=False, save_folder='Conway_GPT'):
     print(df.shape)
     
     toroidal_str = 'toroidal' if Toroidal else 'non_toroidal'
-    save_path = os.path.join(save_folder, f'EXAMPLE_conway_states_{start}_{end}_{A}by{N}by{N}by{I}_{toroidal_str}_{timestamp}.csv')
+    save_path = os.path.join(save_folder, f'conway_states_{start}_{end}_{A}by{N}by{N}by{I}_{toroidal_str}_{timestamp}.csv')
     df.to_csv(save_path, index=False)
 
     end_time = time.time()
