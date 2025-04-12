@@ -99,7 +99,7 @@ def cell_to_image(cell_str, grid_size=(32, 32)):
     return img
 
 
-class MacrosDataset(Dataset):
+class MacroDataset(Dataset):
     def __init__(self, csv_file, tokenizer, model, clip, state_columns, grid_size=(32,32)):
         """
         csv_file: path to the CSV with Conway states.
@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
     train_file = "Conway_GPT/EXAMPLE_conway_states_0_1_100by32by32by256_toroidal_20250412_075417.csv"
     state_columns = [f"State {i}" for i in range(1, 33)]
-    dataset = MacrosDataset(train_file, tokenizer, model, clip, state_columns, grid_size=(32,32))
+    dataset = MacroDataset(train_file, tokenizer, model, clip, state_columns, grid_size=(32,32))
     dataset = Subset(dataset, indices=range(100))
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
     print(len(dataloader))
