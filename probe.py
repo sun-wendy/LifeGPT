@@ -99,7 +99,7 @@ def cell_to_image(cell_str, grid_size=(32, 32)):
     return img
 
 
-class OpenEndednessDataset(Dataset):
+class MacrosDataset(Dataset):
     def __init__(self, csv_file, tokenizer, model, clip, state_columns, grid_size=(32,32)):
         """
         csv_file: path to the CSV with Conway states.
@@ -157,16 +157,36 @@ class OpenEndednessDataset(Dataset):
             emb = self.clip.embed_img(img)
             embeddings.append(emb)
         embeddings_tensor = torch.stack(embeddings, dim=0)  # (T, D_clip)
+        print(embeddings_tensor.shape, flush=True)
         score = metrics.calc_open_endedness_score(embeddings_tensor)
         print(score, flush=True)
         return score
+    
+    def compute_supervised_target(self, row):
+        """
+        Computes the supervised target score using final state image and a text prompt ("glider")
+        via calc_supervised_target_score. This function assumes a single final state image (T=1)
+        and a single text embedding (T2=1), so the kernel becomes a 1x1 matrix.
+        """
+        final_state_str = str(row[self.state_columns[-1]])
+        try:
+            final_img = cell_to_image(final_state_str, grid_size=self.grid_size)
+        except Exception as e:
+            print(f"Error processing final state: {e}")
+            return 0.0
+        
+        final_img_emb = self.clip.embed_img(final_img).unsqueeze(0)  # shape: (1, D)
+        text_emb = self.clip.embed_txt(["glider"])  # shape: (1, D)
+        target = metrics.calc_supervised_target_score(final_img_emb, text_emb)
+        return target 
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        # Use the first state's column to get the latent representation.
         initial_state = row[self.state_columns[0]]
         latent = self.encode_initial_state(initial_state)  # shape: (D,)
-        score = self.compute_open_endedness(row)  # scalar open-endedness score
+        # score = self.compute_open_endedness(row)  # scalar open-endedness score
+        score = self.compute_supervised_target(row)
+        print(score, flush=True)
         return latent, torch.tensor(score, dtype=torch.float32)
 
 
@@ -192,9 +212,9 @@ if __name__ == "__main__":
     clip = foundation_models.create_foundation_model("clip")
 
     train_file = "Conway_GPT/EXAMPLE_conway_states_0_1_100by32by32by256_toroidal_20250412_075417.csv"
-    state_columns = [f"State {i}" for i in range(1, 11)]
-    dataset = OpenEndednessDataset(train_file, tokenizer, model, clip, state_columns, grid_size=(32,32))
-    dataset = Subset(dataset, indices=range(10))
+    state_columns = [f"State {i}" for i in range(1, 33)]
+    dataset = MacrosDataset(train_file, tokenizer, model, clip, state_columns, grid_size=(32,32))
+    dataset = Subset(dataset, indices=range(100))
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
     print(len(dataloader))
 
